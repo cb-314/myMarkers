@@ -10,38 +10,11 @@ cv::Point calcCentroid(std::vector<cv::Point> points)
   return centroid;
 }
 
-int main(int argc, char *argv[])
+void findTwoRectangles(const cv::Mat &grayscale, std::vector< std::vector<cv::Point> > &markers)
 {
-  // setup camera
-  cv::VideoCapture cap(0); // open the default camera
-  if(!cap.isOpened())  // check if it worked
-  {
-    std::cout << "Couldn't open cam!" << std::endl;
-    return -1;
-  }
-  cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-  cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-  int xsize = cap.get(CV_CAP_PROP_FRAME_WIDTH);
-  int ysize = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
-  
-  // get calibration stuff
-  cv::Mat cameraMatrix;
-  cv::Mat distCoeffs;
-
-  cv::FileStorage calibFile("../calibration/logitech.yml", 0);
-  calibFile["camera_matrix"] >> cameraMatrix;
-  calibFile["distortion_coefficients"] >> distCoeffs;
-  calibFile.release();
-  
-  // main loop
-  while(true)
-  {
-    cv::Mat frame;
-    cap >> frame; // grab a frame
-
-    cv::Mat grayscale;
-    cv::cvtColor(frame, grayscale, CV_BGR2GRAY, 1); 
-
+    int xsize = grayscale.size().width;
+    int ysize = grayscale.size().height;
+    
     cv::Mat binary;
     cv::threshold(grayscale, binary, cv::mean(grayscale)[0], 255, cv::THRESH_BINARY);
 
@@ -53,7 +26,6 @@ int main(int argc, char *argv[])
     for(int i = 0; i < hierarchy.size(); i++)
       if(std::fabs(cv::contourArea(contours[i])) > 100)
         largeContours.push_back(contours[i]);
-    std::cout << hierarchy.size() << " " << largeContours.size() << std::endl;
     
     std::vector<std::vector<cv::Point> > rectangles;
     for(int i = 0; i < largeContours.size(); i++)
@@ -64,7 +36,6 @@ int main(int argc, char *argv[])
         rectangles.push_back(approx);
     }
     
-    std::vector<std::vector<cv::Point> > markers;
     for(int i = 0; i < rectangles.size(); i++)
     {
       for(int j = 0; j < i; j++)
@@ -131,6 +102,42 @@ int main(int argc, char *argv[])
         }
       }
     }
+}
+
+int main(int argc, char *argv[])
+{
+  // setup camera
+  cv::VideoCapture cap(0); // open the default camera
+  if(!cap.isOpened())  // check if it worked
+  {
+    std::cout << "Couldn't open cam!" << std::endl;
+    return -1;
+  }
+  cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
+  cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+  int xsize = cap.get(CV_CAP_PROP_FRAME_WIDTH);
+  int ysize = cap.get(CV_CAP_PROP_FRAME_HEIGHT);
+  
+  // get calibration stuff
+  cv::Mat cameraMatrix;
+  cv::Mat distCoeffs;
+
+  cv::FileStorage calibFile("../calibration/logitech.yml", 0);
+  calibFile["camera_matrix"] >> cameraMatrix;
+  calibFile["distortion_coefficients"] >> distCoeffs;
+  calibFile.release();
+  
+  // main loop
+  while(true)
+  {
+    cv::Mat frame;
+    cap >> frame; // grab a frame
+
+    cv::Mat grayscale;
+    cv::cvtColor(frame, grayscale, CV_BGR2GRAY, 1); 
+
+    std::vector<std::vector<cv::Point> > markers;
+    findTwoRectangles(grayscale, markers);
 
     if(markers.size() == 2)
     {
