@@ -1,9 +1,5 @@
 #include <opencv2/opencv.hpp>
-#include <iostream>
-#include <iomanip>
-#include <sstream>
 #include <vector>
-#include <sys/time.h>
 
 cv::Point calcCentroid(std::vector<cv::Point> points)
 {
@@ -46,21 +42,13 @@ int main(int argc, char *argv[])
   calibFile["distortion_coefficients"] >> distCoeffs;
   calibFile.release();
   
-  // timing stuff
-  timeval start, end;
-
-  cv::vector<double> times(100, 0.0);
   // main loop
   while(true)
   {
-    std::cout << "-------------------------------------------------------" << std::endl;
     cv::Mat frame;
     cap >> frame; // grab a frame
 
-    gettimeofday(&start, NULL);
-    
     cv::Mat grayscale;
-//    cv::cvtColor(frame, grayscale, CV_RGB2GRAY);
     cv::cvtColor(frame, grayscale, CV_BGR2GRAY, 1); 
 
     cv::Mat binary;
@@ -127,30 +115,11 @@ int main(int argc, char *argv[])
           if(distance > maxDist)
             match1 = false;
         }
-        bool match2 = true;
-        for(int k = 0; k < 3; k++)
-        {
-          cv::Point vec1 = marker1[k]-marker1[k+1];
-          cv::Point vec2 = marker2[k]-marker2[k+1];
-
-          double innerProd = vec1.x*vec2.x+vec1.y*vec2.y;
-          double norm = (vec1.x-vec2.x)*(vec1.x-vec2.x)+(vec1.y-vec2.y)*(vec1.y-vec2.y);
-
-          if(std::fabs(innerProd/norm) < std::sin(1.4)) // > 10deg error
-            match2 = false;
-        }
         bool match3 = true;
         cv::Point centroid1 = calcCentroid(marker1);
         cv::Point centroid2 = calcCentroid(marker2);
         if(cv::norm(centroid1-centroid2) > std::max(cv::arcLength(marker1, true), cv::arcLength(marker2, true))*0.05)
           match3 = false;
-        bool match4 = true;
-/*        double trueRatio = (15.0*15.0)/(9.0*9.0);
-        double ratio = std::fabs(cv::contourArea(marker1) / cv::contourArea(marker2));
-        ratio = std::max(ratio, 1.0/ratio);
-        if(ratio < 0.5*trueRatio || ratio > 1.5*trueRatio)
-          match4 = false;*/
-        
         bool match5 = true;
         for(int k = 0; k < 4; k++)
         {
@@ -164,7 +133,7 @@ int main(int argc, char *argv[])
             match5 = false;
         }
         
-        if(match1 && match2 && match3 && match4 && match5)
+        if(match1 && match3 && match5)
         {
           markers.push_back(marker1);
           markers.push_back(marker2);
@@ -172,8 +141,6 @@ int main(int argc, char *argv[])
       }
     }
 
-    cv::Mat ortho = frame.clone();
-    cv::Mat output = frame.clone();
     if(markers.size() == 2)
     {
       // take care: 
@@ -253,12 +220,6 @@ int main(int argc, char *argv[])
       cv::fillConvexPoly(mask3, mask3p, 4, 255);
       cv::fillConvexPoly(mask4, mask4p, 4, 255);
 
-      
-//      cv::imshow("mask1", grayscaleSmall + 0.1*mask1);
-//      cv::imshow("mask2", grayscaleSmall + 0.1*mask2);
-//      cv::imshow("mask3", grayscaleSmall + 0.1*mask3);
-//      cv::imshow("mask4", grayscaleSmall + 0.1*mask4);
-
       double mean1 = cv::mean(grayscaleSmall, mask1)[0];
       double mean2 = cv::mean(grayscaleSmall, mask2)[0];
       double mean3 = cv::mean(grayscaleSmall, mask3)[0];
@@ -318,14 +279,6 @@ int main(int argc, char *argv[])
         innerMarkers = temp;
       }
 
-      std::vector<cv::Point2f> square;
-      square.push_back(cv::Point(xsize/2+75, ysize/2-75));
-      square.push_back(cv::Point(xsize/2+75, ysize/2+75 ));
-      square.push_back(cv::Point(xsize/2-75, ysize/2+75));
-      square.push_back(cv::Point(xsize/2-75, ysize/2-75));
-      cv::Mat pTransMat = cv::getPerspectiveTransform(&(outerMarkers.front()), &(square.front()));
-      cv::warpPerspective(frame, ortho, pTransMat, frame.size());
-      
       std::vector<cv::Point2f> imagePoints;
       for(int i = 0; i < 4; i++)
         imagePoints.push_back(outerMarkers[i]);
@@ -345,48 +298,10 @@ int main(int argc, char *argv[])
       cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs, rvec, tvec);
       cv::Mat rmat;
       cv::Rodrigues(-rvec, rmat);
-//      std::cout << tvec << " " << rmat*tvec << std::endl;
 
-      std::vector<std::vector<cv::Point> > finalMarkers;
-      std::vector<cv::Point> oM(4, cv::Point(0, 0));
-      std::vector<cv::Point> iM(4, cv::Point(0, 0));
-      for(int i = 0; i < 4; i++)
-      {
-        oM[i] = outerMarkers[i];
-        iM[i] = innerMarkers[i];
-      }
-      finalMarkers.push_back(oM);
-      finalMarkers.push_back(iM);
-      
-      cv::drawContours(output, finalMarkers, -1, cv::Scalar(0, 0, 255), 1, 8);
-      for(int i = 0; i < finalMarkers.size(); i++)
-        for(int j = 0; j < finalMarkers[i].size(); j++)
-        {
-          std::stringstream s;
-          s << j;
-          cv::putText(output, s.str(), finalMarkers[i][j]+cv::Point(5, 5), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0));
-          cv::circle(output, finalMarkers[i][j], 1, cv::Scalar(0, 255, 0));
-          cv::circle(output, finalMarkers[i][j], 5, cv::Scalar(0, 255, 0));
-        }
-      cv::Mat posVec = rmat*tvec;
-      std::stringstream tVecS;
-      for(int i = 0; i < 3; i++)
-        tVecS << std::setw(6) << std::setprecision(4) << tvec.at<double>(i) << " ";
-      cv::putText(output, tVecS.str(), cv::Point(5, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0));
-      std::stringstream posVecS;
-      for(int i = 0; i < 3; i++)
-        posVecS << std::setw(6) << std::setprecision(4) << posVec.at<double>(i) << " ";
-      cv::putText(output, posVecS.str(), cv::Point(5, 100), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0));
+      cv::Mat finalVec = rmat*tvec;
+
     }
-    
-    gettimeofday(&end, NULL);
-    times.erase(times.begin());
-    times.push_back((end.tv_sec - start.tv_sec) * 1e3 + (end.tv_usec-start.tv_usec) * 1e-3);
-    std::cout << vecMean(times) << std::endl;
-  
-    cv::imshow("input", frame);
-    cv::imshow("output", output);
-    cv::imshow("ortho", ortho);
     
     if(cv::waitKey(10) != -1) // wait till key was pressed
       break;
