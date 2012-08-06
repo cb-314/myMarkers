@@ -10,15 +10,6 @@ cv::Point calcCentroid(std::vector<cv::Point> points)
   return centroid;
 }
 
-double vecMean(std::vector<double> values)
-{
-  double mean = 0.0;
-  for(std::vector<double>::iterator it = values.begin(); it != values.end(); it++)
-    mean += *it;
-  mean /= values.size();
-  return mean;
-}
-
 int main(int argc, char *argv[])
 {
   // setup camera
