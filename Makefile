@@ -1,6 +1,6 @@
 LDFLAGS=
 LIBS= `pkg-config --libs opencv`
-CFLAGS= -O3 -g `pkg-config --cflags opencv`
+CFLAGS= -O0 -g `pkg-config --cflags opencv`
 
 all: myMarkers
 
