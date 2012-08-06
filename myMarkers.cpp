@@ -128,17 +128,17 @@ int main(int argc, char *argv[])
             match1 = false;
         }
         bool match2 = true;
-        for(int k = 0; k < 3; k++)
-        {
-          cv::Point vec1 = marker1[k]-marker1[k+1];
-          cv::Point vec2 = marker2[k]-marker2[k+1];
-
-          double innerProd = vec1.x*vec2.x+vec1.y*vec2.y;
-          double norm = (vec1.x-vec2.x)*(vec1.x-vec2.x)+(vec1.y-vec2.y)*(vec1.y-vec2.y);
-
-          if(std::fabs(innerProd/norm) < std::sin(1.4)) // > 10deg error
-            match2 = false;
-        }
+//        for(int k = 0; k < 3; k++)
+//        {
+//          cv::Point vec1 = marker1[k]-marker1[k+1];
+//          cv::Point vec2 = marker2[k]-marker2[k+1];
+//
+//          double innerProd = vec1.x*vec2.x+vec1.y*vec2.y;
+//          double norm = (vec1.x-vec2.x)*(vec1.x-vec2.x)+(vec1.y-vec2.y)*(vec1.y-vec2.y);
+//
+//          if(std::fabs(innerProd/norm) < std::sin(1.4)) // > 10deg error
+//            match2 = false;
+//        }
         bool match3 = true;
         cv::Point centroid1 = calcCentroid(marker1);
         cv::Point centroid2 = calcCentroid(marker2);
