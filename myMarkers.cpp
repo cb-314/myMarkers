@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
       cv::Mat posVec = rmat*tvec;
       std::stringstream tVecS;
       for(int i = 0; i < 3; i++)
-        tVecS << std::setw(6) << std::setprecision(4) << tvec.at<double>(i) << " ";
+        tVecS << std::setw(6) << std::setprecision(4) << rvec.at<double>(i) << " ";
       cv::putText(output, tVecS.str(), cv::Point(5, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0));
       std::stringstream posVecS;
       for(int i = 0; i < 3; i++)
